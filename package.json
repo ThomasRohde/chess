@@ -14,12 +14,10 @@
   "dependencies": {
     "chess.js": "^1.4.0",
     "lucide-react": "^0.468.0",
-    "lz-string": "^1.5.0",
     "react": "^18.3.1",
     "react-chessboard": "^4.7.3",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.28.0",
-    "zod": "^3.24.1"
+    "react-router-dom": "^6.28.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.49.1",

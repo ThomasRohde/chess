@@ -119,7 +119,7 @@ export function PlayPage() {
 
     justPublishedPayload.current = encoded;
     setShareUrl(nextShareUrl);
-    navigate(`/p/${encoded}`);
+    navigate(`/${encoded}`);
   }
 
   function continueLocally() {

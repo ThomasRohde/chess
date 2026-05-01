@@ -1,4 +1,3 @@
-import { compressToEncodedURIComponent } from "lz-string";
 import { describe, expect, it } from "vitest";
 
 import { STARTING_FEN } from "../chess/chessService";
@@ -18,6 +17,8 @@ describe("urlCodec", () => {
     const decoded = decodePublishedState(encoded);
 
     expect(decoded).toEqual({ ok: true, state });
+    expect(encoded).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(encoded).not.toContain("=");
   });
 
   it("preserves last move metadata", () => {
@@ -36,42 +37,49 @@ describe("urlCodec", () => {
     }
   });
 
-  it("rejects unsupported versions", () => {
-    const encoded = compressToEncodedURIComponent(JSON.stringify({ v: 2 }));
+  it("preserves castling, en-passant, and move counters", () => {
+    const state = createPublishedState({
+      fen: "rnbqkbnr/ppp1p1pp/8/3pPp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6 7 12",
+      publishedBy: "Ada",
+      lastMove: { uci: "f7f5", san: "f5" },
+      now: new Date("2026-05-01T10:30:00.000Z"),
+    });
 
-    expect(decodePublishedState(encoded)).toEqual({
+    const decoded = decodePublishedState(encodePublishedState(state));
+
+    expect(decoded.ok).toBe(true);
+    if (decoded.ok) {
+      expect(decoded.state.fen).toBe(state.fen);
+    }
+  });
+
+  it("produces meaningfully shorter payloads than raw FEN", () => {
+    const state = createPublishedState({
+      fen: STARTING_FEN,
+      publishedBy: "Thomas",
+      lastMove: null,
+      now: new Date("2026-05-01T10:30:00.000Z"),
+    });
+
+    expect(encodePublishedState(state).length).toBeLessThan(STARTING_FEN.length);
+  });
+
+  it("rejects malformed binary payloads", () => {
+    expect(decodePublishedState("not-valid")).toEqual({
       ok: false,
-      reason: "unsupported-version",
+      reason: "invalid-binary",
     });
   });
 
-  it("rejects invalid JSON", () => {
-    const encoded = compressToEncodedURIComponent("{");
-
-    expect(decodePublishedState(encoded)).toEqual({
+  it("rejects truncated binary states", () => {
+    expect(decodePublishedState("Ag")).toEqual({
       ok: false,
-      reason: "invalid-json",
-    });
-  });
-
-  it("rejects invalid FEN", () => {
-    const encoded = compressToEncodedURIComponent(
-      JSON.stringify({
-        v: 1,
-        f: "not a fen",
-        by: "Ada",
-        at: "2026-05-01T10:30:00.000Z",
-      }),
-    );
-
-    expect(decodePublishedState(encoded)).toEqual({
-      ok: false,
-      reason: "invalid-schema",
+      reason: "invalid-binary",
     });
   });
 
   it("rejects oversized encoded payloads", () => {
-    expect(decodePublishedState("a".repeat(4097))).toEqual({
+    expect(decodePublishedState("a".repeat(513))).toEqual({
       ok: false,
       reason: "oversized",
     });

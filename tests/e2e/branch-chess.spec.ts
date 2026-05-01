@@ -1,7 +1,16 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const sharedBlackToMovePayload =
-  "N4IgbiBcCMA0IDMogE4DsBGBHA1htKA9AA6lmmEAcVhALAAoDMN9r90bhASgHIBCARQDSfHlwAEGcUIE4s4gLTiADOOgh4GAJ7IAKgAsA9gFsAhgGcNIAK7IApgCY7tK+dNp7L+KYAuyB8oOAGwKygCsodC60MqQtJSQYQCcAHRJlADsAFogAL5AA";
+import { createPublishedState } from "../../src/domain/state/publishedState";
+import { encodePublishedState } from "../../src/domain/state/urlCodec";
+
+const sharedBlackToMovePayload = encodePublishedState(
+  createPublishedState({
+    fen: "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+    publishedBy: "Ada",
+    lastMove: { uci: "e2e4", san: "e4" },
+    now: new Date("2026-05-01T10:30:00.000Z"),
+  }),
+);
 
 test("fresh game can publish a branch URL", async ({ page }) => {
   await page.goto("./");
@@ -14,10 +23,10 @@ test("fresh game can publish a branch URL", async ({ page }) => {
   await page.getByRole("button", { name: "Confirm" }).click();
   await page.getByRole("button", { name: /publish this branch/i }).click();
 
-  await expect(page).toHaveURL(/#\/p\//);
+  await expect(page).toHaveURL(/#\//);
   const publishedUrl = page.url();
   await expect(page.getByLabel("Share branch")).toBeVisible();
-  await expect(page.getByLabel("Current URL")).toHaveValue(/\/chess\/#\/p\//);
+  await expect(page.getByLabel("Current URL")).toHaveValue(/\/chess\/#\/[A-Za-z0-9_-]+$/);
 
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Share board image" }).click();
@@ -37,7 +46,7 @@ test("fresh game can publish a branch URL", async ({ page }) => {
 });
 
 test("shared black-to-move position supports click-to-move", async ({ page }) => {
-  await page.goto(`./#/p/${sharedBlackToMovePayload}`);
+  await page.goto(`./#/${sharedBlackToMovePayload}`);
   await page.getByRole("textbox", { name: "Nickname" }).fill("Ada");
   await page.getByRole("button", { name: "Continue" }).click();
 
@@ -89,9 +98,9 @@ async function publishMoveFromFreshUrl(
   await page.getByRole("button", { name: "Confirm" }).click();
   await page.getByRole("button", { name: "Publish this branch" }).click();
 
-  await expect(page).toHaveURL(/#\/p\//);
+  await expect(page).toHaveURL(/#\//);
   await expect(page.getByLabel("Share branch")).toBeVisible();
-  await expect(page.getByLabel("Current URL")).toHaveValue(/\/chess\/#\/p\//);
+  await expect(page.getByLabel("Current URL")).toHaveValue(/\/chess\/#\/[A-Za-z0-9_-]+$/);
 
   await Promise.all([
     page.waitForLoadState("domcontentloaded"),

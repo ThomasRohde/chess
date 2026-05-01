@@ -6,13 +6,10 @@ export function buildXShareUrl(input: {
   const text = [
     "♟️ Branch Chess",
     "",
-    `${input.nickname} played ${input.moveSan}.`,
-    "🌿 A new branch is live.",
-    "",
-    "Your move:",
+    `${input.nickname}: ${input.moveSan}`,
+    "🌿 Your move",
   ].join("\n");
   const params = new URLSearchParams({
-    hashtags: "BranchChess,Chess",
     text,
     url: input.shareUrl,
   });

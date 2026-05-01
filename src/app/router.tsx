@@ -8,7 +8,9 @@ export function AppRouter() {
     <HashRouter>
       <Routes>
         <Route path="/" element={<PlayPage />} />
+        <Route path="/:payload" element={<PlayPage />} />
         <Route path="/p/:payload" element={<PlayPage />} />
+        <Route path="/s/:payload" element={<PlayPage />} />
         <Route path="/bad-link" element={<BadLinkPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

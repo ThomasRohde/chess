@@ -4,7 +4,7 @@ export function buildShareUrl(
   basePath = import.meta.env.BASE_URL,
 ): string {
   const normalizedBase = normalizeBasePath(basePath);
-  return `${origin}${normalizedBase}#/p/${encodedPayload}`;
+  return `${origin}${normalizedBase}#/${encodedPayload}`;
 }
 
 export function normalizeBasePath(basePath: string): string {

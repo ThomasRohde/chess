@@ -13,7 +13,7 @@ describe("share URL helpers", () => {
 
   it("builds absolute hash-route share URLs", () => {
     expect(buildShareUrl("abc", "https://example.com", "/chess/")).toBe(
-      "https://example.com/chess/#/p/abc",
+      "https://example.com/chess/#/abc",
     );
   });
 
@@ -21,17 +21,13 @@ describe("share URL helpers", () => {
     const url = buildXShareUrl({
       nickname: "Ada",
       moveSan: "Nf3",
-      shareUrl: "https://example.com/chess/#/p/abc",
+      shareUrl: "https://example.com/chess/#/abc",
     });
 
     expect(url).toContain("https://twitter.com/intent/tweet?");
     const params = new URL(url).searchParams;
-    expect(params.get("text")).toBe(
-      ["♟️ Branch Chess", "", "Ada played Nf3.", "🌿 A new branch is live.", "", "Your move:"].join(
-        "\n",
-      ),
-    );
-    expect(params.get("hashtags")).toBe("BranchChess,Chess");
-    expect(params.get("url")).toBe("https://example.com/chess/#/p/abc");
+    expect(params.get("text")).toBe(["♟️ Branch Chess", "", "Ada: Nf3", "🌿 Your move"].join("\n"));
+    expect(params.get("hashtags")).toBe(null);
+    expect(params.get("url")).toBe("https://example.com/chess/#/abc");
   });
 });
