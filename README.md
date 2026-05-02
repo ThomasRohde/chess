@@ -4,37 +4,47 @@
 ![React](https://img.shields.io/badge/React-18-1f7660)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-1f7660)
 ![Vite](https://img.shields.io/badge/Vite-6-1f7660)
+![License](https://img.shields.io/badge/License-MIT-1f7660)
 
-Branch Chess is URL-branching chess: make a legal move, publish it, and the board becomes a compact share link. Anyone who opens the link can continue from that exact position and publish a new branch.
+Branch Chess is URL-branching chess. Make one legal move, publish it, and the current board becomes a compact share link. Anyone who opens that link can continue from the same position and publish the next branch.
 
-The app is static, backend-free, and designed for GitHub Pages at `/chess/`.
+It is a static React app with no backend, accounts, cookies, analytics, or server-side storage. The GitHub Pages build is configured for `/chess/`.
 
-![Branch Chess screenshot](docs/branch-chess-screenshot.png)
+<p align="center">
+  <img src="docs/branch-chess-screenshot.png" alt="Branch Chess showing a published e4 branch with black to move" width="960">
+</p>
 
-## Features
+## Live Demo
 
-- Legal chess play powered by `chess.js`.
-- Drag-and-drop and click-to-move board interaction.
-- Promotion picker, move confirmation, final-game display, and bad-link handling.
-- Compact binary Base64URL payloads in hash routes: `/#/<payload>`.
-- Canonical FEN internally, packed URL state externally.
-- Copyable branch URLs with clipboard fallback.
-- X composer links and generated board-image sharing/download.
-- No backend, accounts, cookies, analytics, or server-side persistence.
+[Open Branch Chess on GitHub Pages](https://thomasrohde.github.io/chess/)
 
-## Live Site
-
-Configured for GitHub Pages:
-
-```text
-https://thomasrohde.github.io/chess/
-```
-
-The app uses hash routing, so shared positions look like:
+Shared positions use hash routes, so a branch URL looks like this:
 
 ```text
 https://thomasrohde.github.io/chess/#/<packed-position>
 ```
+
+## Highlights
+
+- Legal chess rules powered by `chess.js`.
+- Drag-and-drop and click-to-move board interaction.
+- One-move publish flow: move, confirm, publish, share.
+- Compact Base64URL payloads stored entirely in the URL fragment.
+- Canonical FEN internally, packed binary state externally.
+- Promotion picker, check/checkmate/stalemate/draw status, and bad-link handling.
+- Copy URL, post-to-X composer links, and generated board image sharing/downloads.
+- Local nickname storage only; the nickname is included in links you publish.
+
+## How It Works
+
+1. Start from the initial board or open a branch URL.
+2. Choose a nickname.
+3. Make one legal move.
+4. Confirm and publish the move.
+5. Share the generated URL.
+6. The next player opens that branch and continues the game tree.
+
+Each published URL restores the playable position, side to move, castling rights, en-passant state, move counters, publisher nickname, timestamp, and latest move metadata.
 
 ## Quick Start
 
@@ -43,14 +53,19 @@ Requirements:
 - Node.js 22
 - npm
 
-Install and run locally:
+Install dependencies:
 
 ```bash
 npm ci
+```
+
+Start the development server:
+
+```bash
 npm run dev
 ```
 
-Open the local URL Vite prints, usually:
+Vite serves the app at a local `/chess/` base path, usually:
 
 ```text
 http://127.0.0.1:5173/chess/
@@ -60,73 +75,72 @@ http://127.0.0.1:5173/chess/
 
 ```bash
 npm run dev       # Start the local Vite server
-npm run test      # Run unit and component tests
+npm run test      # Run unit and component tests with Vitest
 npm run test:e2e  # Run Playwright end-to-end tests
 npm run build     # Type-check and build the static site
 npm run preview   # Preview the production build locally
 ```
 
-## How Branching Works
+If Playwright browsers are not installed on your machine yet:
 
-1. Start a fresh board or open a shared branch URL.
-2. Choose a nickname. It is stored locally and included in links you publish.
-3. Make one legal move.
-4. Confirm and publish the move.
-5. Share the generated URL. The next player opens that branch and continues.
-
-Each published URL contains the current chess position, side to move, castling rights, en-passant file, counters, last move metadata, nickname, timestamp, and payload version.
+```bash
+npx playwright install chromium
+```
 
 ## URL State
 
-Branch Chess keeps FEN as the internal semantic representation, then encodes the shared URL with a compact binary packer:
+Branch Chess keeps FEN as the semantic source of truth and packs shareable state into a binary payload before encoding it as Base64URL without padding. That keeps links short and safe inside URL fragments.
 
-- 3-bit payload version
-- side to move
-- castling rights
-- en-passant file
-- 64-bit occupancy map
-- extracted color and piece masks
-- halfmove and fullmove counters
-- created-at timestamp
-- publisher nickname
-- last move SAN and UCI
+The payload includes:
 
-The binary payload is encoded as Base64URL without padding, which keeps links compact and safe inside URL fragments.
+- Payload version marker
+- Side to move
+- Castling rights
+- En-passant file
+- 64-square occupancy and piece masks
+- Halfmove and fullmove counters
+- Created-at timestamp
+- Publisher nickname
+- Last move in SAN and UCI
+
+Malformed, oversized, or unsupported payloads are routed to a friendly bad-link screen instead of crashing the app.
 
 ## Project Structure
 
 ```text
 src/
-  components/      React UI for board, moves, nickname, and sharing
-  domain/          Chess rules, status helpers, nickname rules, URL state codec
-  pages/           Routed pages for play and bad-link states
+  app/             Router and app entry
+  components/      Board, move, nickname, and share UI
+  domain/          Chess rules, nickname rules, and URL state codecs
+  pages/           Play and bad-link pages
   persistence/     Persistence adapter boundary; v1 is local-only
   sharing/         Share URL, X composer URL, and board image generation
-  storage/         Local nickname storage with locked-down browser fallback
+  storage/         Local nickname storage
 tests/e2e/         Playwright browser coverage
+docs/              README assets
 .github/workflows  GitHub Pages deployment workflow
 ```
 
 ## Deployment
 
-GitHub Pages deployment is defined in `.github/workflows/pages.yml`.
+Deployment is handled by [`.github/workflows/pages.yml`](.github/workflows/pages.yml).
 
-The workflow runs on pushes to `master` and manual dispatch:
+On pushes to `master` and manual workflow dispatches, GitHub Actions:
 
-1. Install dependencies with `npm ci`.
-2. Install Playwright Chromium.
-3. Run unit/component tests.
-4. Run Playwright E2E tests.
-5. Build the static site.
-6. Upload and deploy `dist` with GitHub Pages.
+1. Installs dependencies with `npm ci`.
+2. Installs Playwright Chromium.
+3. Runs unit and component tests.
+4. Runs Playwright end-to-end tests.
+5. Builds the static site.
+6. Uploads `dist/` to GitHub Pages.
 
 In the repository settings, set Pages source to **GitHub Actions**.
 
 ## V1 Scope
 
-Branch Chess intentionally does not include a backend, user accounts, a global branch tree, move history, PGN export, AI, clocks, chat, or analytics.
+Branch Chess intentionally stays small: no backend, user accounts, global branch tree, PGN export, clocks, chat, AI opponent, or analytics.
 
-A shared link restores the current playable position and the latest published move. It does not restore full repetition history, so exact threefold-repetition claims are outside v1 scope.
+A link restores the current playable position and latest published move. It does not restore full move history, so exact threefold-repetition claims are outside the v1 scope.
 
 ## License
 
