@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowRight, GitBranch, Link2, MousePointer2, RotateCcw } from "lucide-react";
 
+import { AppHeader } from "../components/Layout/AppHeader";
 import { ChessBoardView } from "../components/Board/ChessBoardView";
 import { PromotionDialog } from "../components/Board/PromotionDialog";
-import { NicknameEditor } from "../components/Nickname/NicknameEditor";
 import { NicknameGate } from "../components/Nickname/NicknameGate";
 import { GameStatusBanner } from "../components/Move/GameStatusBanner";
 import { LastMoveCard } from "../components/Move/LastMoveCard";
@@ -19,7 +19,7 @@ import {
 import type { AppliedMove } from "../domain/chess/moveTypes";
 import { createPublishedState, type PublishedStateV1 } from "../domain/state/publishedState";
 import { decodePublishedState, encodePublishedState } from "../domain/state/urlCodec";
-import { NoopBranchPersistenceAdapter } from "../persistence/NoopBranchPersistenceAdapter";
+import { SupabaseBranchPersistenceAdapter } from "../persistence/SupabaseBranchPersistenceAdapter";
 import { buildShareUrl } from "../sharing/shareUrl";
 import { readNickname } from "../storage/localNicknameStore";
 import { BadLinkPage } from "./BadLinkPage";
@@ -29,7 +29,7 @@ type PromotionRequest = {
   to: string;
 };
 
-const persistence = new NoopBranchPersistenceAdapter();
+const persistence = new SupabaseBranchPersistenceAdapter();
 
 export function PlayPage() {
   const { payload } = useParams();
@@ -41,6 +41,8 @@ export function PlayPage() {
   const [pendingMove, setPendingMove] = useState<AppliedMove | null>(null);
   const [confirmedMove, setConfirmedMove] = useState<AppliedMove | null>(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
   const [promotionRequest, setPromotionRequest] = useState<PromotionRequest | null>(null);
   const justPublishedPayload = useRef<string | null>(null);
 
@@ -48,6 +50,8 @@ export function PlayPage() {
     setFen(routeState?.fen ?? STARTING_FEN);
     setPendingMove(null);
     setPromotionRequest(null);
+    setIsPublishing(false);
+    setPublishError(null);
     if (payload !== justPublishedPayload.current) {
       setConfirmedMove(null);
       setShareUrl(null);
@@ -68,6 +72,7 @@ export function PlayPage() {
       setPendingMove(result.move);
       setConfirmedMove(null);
       setShareUrl(null);
+      setPublishError(null);
       return true;
     },
     [fen],
@@ -93,10 +98,11 @@ export function PlayPage() {
 
     setPendingMove(null);
     setPromotionRequest(null);
+    setPublishError(null);
   }
 
   async function publishMove() {
-    if (!confirmedMove || !nickname) {
+    if (!confirmedMove || !nickname || isPublishing) {
       return;
     }
 
@@ -111,15 +117,26 @@ export function PlayPage() {
     const encoded = encodePublishedState(childState);
     const nextShareUrl = buildShareUrl(encoded);
 
-    await persistence.publishBranch({
-      parentFen: confirmedMove.beforeFen,
-      childState,
-      shareUrl: nextShareUrl,
-    });
+    setIsPublishing(true);
+    setPublishError(null);
 
-    justPublishedPayload.current = encoded;
-    setShareUrl(nextShareUrl);
-    navigate(`/${encoded}`);
+    try {
+      await persistence.publishBranch({
+        parentPayload: payload ?? null,
+        parentFen: confirmedMove.beforeFen,
+        childPayload: encoded,
+        childState,
+        shareUrl: nextShareUrl,
+      });
+
+      justPublishedPayload.current = encoded;
+      setShareUrl(nextShareUrl);
+      navigate(`/${encoded}`);
+    } catch (error) {
+      setPublishError(error instanceof Error ? error.message : "This branch could not be published.");
+    } finally {
+      setIsPublishing(false);
+    }
   }
 
   function continueLocally() {
@@ -127,6 +144,7 @@ export function PlayPage() {
     setConfirmedMove(null);
     setPendingMove(null);
     setShareUrl(null);
+    setPublishError(null);
   }
 
   if (decoded && !decoded.ok) {
@@ -146,18 +164,7 @@ export function PlayPage() {
 
   return (
     <main className="app-shell">
-      <header className="app-header">
-        <Link className="brand" to="/">
-          <span className="brand-mark" aria-hidden="true">
-            <img src={`${import.meta.env.BASE_URL}branch-chess-icon.png`} alt="" />
-          </span>
-          <span>
-            <strong>Branch Chess</strong>
-            <small>URL-branching chess</small>
-          </span>
-        </Link>
-        <NicknameEditor nickname={nickname} onNickname={setNickname} />
-      </header>
+      <AppHeader nickname={nickname} onNickname={setNickname} />
 
       <section className="app-intro" aria-labelledby="app-intro-title">
         <div>
@@ -219,10 +226,12 @@ export function PlayPage() {
             }}
           />
           <SharePanel
+            isPublishing={isPublishing}
             move={confirmedMove}
             nickname={nickname ?? ""}
             onContinue={continueLocally}
             onPublish={publishMove}
+            publishError={publishError}
             shareUrl={shareUrl}
           />
           {!activeMove && !status.isFinal ? (

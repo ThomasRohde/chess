@@ -44,6 +44,41 @@ describe("SharePanel", () => {
     expect(onPublish).toHaveBeenCalledOnce();
   });
 
+  it("disables publishing while the branch is being recorded", async () => {
+    const user = userEvent.setup();
+    const onPublish = vi.fn();
+
+    render(
+      <SharePanel
+        isPublishing
+        move={move}
+        nickname="Ada"
+        onContinue={vi.fn()}
+        onPublish={onPublish}
+        shareUrl={null}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /publishing/i }));
+
+    expect(onPublish).not.toHaveBeenCalled();
+  });
+
+  it("shows publish errors", () => {
+    render(
+      <SharePanel
+        move={move}
+        nickname="Ada"
+        onContinue={vi.fn()}
+        onPublish={vi.fn()}
+        publishError="Rejected branch"
+        shareUrl={null}
+      />,
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Rejected branch");
+  });
+
   it("shows copy and X share actions after publish", () => {
     render(
       <SharePanel

@@ -8,7 +8,7 @@
 
 Branch Chess is URL-branching chess. Make one legal move, publish it, and the current board becomes a compact share link. Anyone who opens that link can continue from the same position and publish the next branch.
 
-It is a static React app with no backend, accounts, cookies, analytics, or server-side storage. The GitHub Pages build is configured for `/chess/`.
+It is a React app with public URL-based play and a Supabase backend for recording published branches. It has no user accounts, cookies, analytics, clocks, or chat. The GitHub Pages build is configured for `/chess/`.
 
 <p align="center">
   <img src="docs/branch-chess-screenshot.png" alt="Branch Chess showing a published e4 branch with black to move" width="960">
@@ -34,6 +34,7 @@ https://thomasrohde.github.io/chess/#/<packed-position>
 - Promotion picker, check/checkmate/stalemate/draw status, and bad-link handling.
 - Copy URL, post-to-X composer links, and generated board image sharing/downloads.
 - Local nickname storage only; the nickname is included in links you publish.
+- Supabase-backed public branch discovery for games in play and finished games.
 
 ## How It Works
 
@@ -45,6 +46,8 @@ https://thomasrohde.github.io/chess/#/<packed-position>
 6. The next player opens that branch and continues the game tree.
 
 Each published URL restores the playable position, side to move, castling rights, en-passant state, move counters, publisher nickname, timestamp, and latest move metadata.
+
+Published branches are also recorded in Supabase. Open `#/games` to inspect non-final branches that can still be continued, or `#/finished` to inspect terminal branches.
 
 ## Quick Start
 
@@ -69,6 +72,32 @@ Vite serves the app at a local `/chess/` base path, usually:
 
 ```text
 http://127.0.0.1:5173/chess/
+```
+
+## Supabase Backend
+
+This repository is wired to the Supabase project `branch-chess`:
+
+```text
+Project ID: ktbyrionvvfdnuihwclx
+URL: https://ktbyrionvvfdnuihwclx.supabase.co
+```
+
+Local development reads public client settings from `.env.local`. Use `.env.example` as the template:
+
+```bash
+VITE_SUPABASE_URL=https://ktbyrionvvfdnuihwclx.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+```
+
+The browser can only read `public.branches`. Publishing goes through the `publish-branch` Edge Function, which validates the branch payload and records the row server-side. The service role key is only used inside the Edge Function.
+
+Supabase files:
+
+```text
+supabase/config.toml
+supabase/migrations/20260502090000_create_branches.sql
+supabase/functions/publish-branch/index.ts
 ```
 
 ## Scripts
@@ -112,10 +141,12 @@ src/
   app/             Router and app entry
   components/      Board, move, nickname, and share UI
   domain/          Chess rules, nickname rules, and URL state codecs
-  pages/           Play and bad-link pages
-  persistence/     Persistence adapter boundary; v1 is local-only
+  games/           Supabase branch records, tree building, and subscriptions
+  pages/           Play, games-in-play, finished-games, and bad-link pages
+  persistence/     Persistence adapter boundary and Supabase publish adapter
   sharing/         Share URL, X composer URL, and board image generation
   storage/         Local nickname storage
+supabase/          Database migration and Edge Function source
 tests/e2e/         Playwright browser coverage
 docs/              README assets
 .github/workflows  GitHub Pages deployment workflow
@@ -138,9 +169,9 @@ In the repository settings, set Pages source to **GitHub Actions**.
 
 ## V1 Scope
 
-Branch Chess intentionally stays small: no backend, user accounts, global branch tree, PGN export, clocks, chat, AI opponent, or analytics.
+Branch Chess intentionally stays small: no user accounts, PGN export, clocks, chat, AI opponent, or analytics.
 
-A link restores the current playable position and latest published move. It does not restore full move history, so exact threefold-repetition claims are outside the v1 scope.
+A link restores the current playable position and latest published move. Supabase records published branch nodes for discovery, but it does not reconstruct full PGN histories, so exact threefold-repetition claims are outside the v1 scope.
 
 ## License
 

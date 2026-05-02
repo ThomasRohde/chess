@@ -44,6 +44,9 @@ jobs:
 
       - name: Build static site
         run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://ktbyrionvvfdnuihwclx.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_7Be9iFgTb8cPa4TBTgVfMg_pBxsyfaf
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5

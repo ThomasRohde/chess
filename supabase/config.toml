@@ -1,0 +1,4 @@
+project_id = "ktbyrionvvfdnuihwclx"
+
+[functions.publish-branch]
+verify_jwt = false

@@ -8,8 +8,10 @@ import { CopyUrlButton } from "./CopyUrlButton";
 import { XShareButton } from "./XShareButton";
 
 type SharePanelProps = {
+  isPublishing?: boolean;
   nickname: string;
   move: AppliedMove | null;
+  publishError?: string | null;
   shareUrl: string | null;
   onPublish: () => void;
   onContinue: () => void;
@@ -18,8 +20,10 @@ type SharePanelProps = {
 };
 
 export function SharePanel({
+  isPublishing = false,
   nickname,
   move,
+  publishError = null,
   shareUrl,
   onPublish,
   onContinue,
@@ -37,9 +41,14 @@ export function SharePanel({
       <section className="side-panel-card" aria-label="Publish branch">
         <div className="card-kicker">Ready to publish</div>
         <p className="muted">Your nickname is included in this link.</p>
-        <button className="button primary full-width" onClick={onPublish}>
+        {publishError ? (
+          <p className="form-error" role="alert">
+            {publishError}
+          </p>
+        ) : null}
+        <button className="button primary full-width" disabled={isPublishing} onClick={onPublish}>
           <Share2 aria-hidden="true" size={18} />
-          Publish this branch
+          {isPublishing ? "Publishing..." : "Publish this branch"}
         </button>
       </section>
     );
