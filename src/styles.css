@@ -85,6 +85,50 @@ a {
   font-size: 0.8rem;
 }
 
+.app-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  margin: 0 0 18px;
+}
+
+.app-intro h1 {
+  margin: 0 0 6px;
+  font-size: clamp(1.45rem, 3vw, 2.15rem);
+  line-height: 1.05;
+  letter-spacing: 0;
+}
+
+.app-intro p {
+  max-width: 720px;
+  margin: 0;
+  color: #4f615d;
+  font-size: clamp(0.95rem, 2vw, 1.05rem);
+  line-height: 1.45;
+}
+
+.intro-flow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #60706b;
+}
+
+.intro-flow span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid rgba(29, 37, 36, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #1d2524;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
 .play-layout {
   display: grid;
   grid-template-columns: minmax(0, 760px) minmax(280px, 360px);
@@ -98,7 +142,7 @@ a {
 }
 
 .board-shell {
-  width: min(100%, calc(100vh - 150px), 760px);
+  width: min(100%, calc(100vh - 240px), 760px);
   aspect-ratio: 1;
 }
 
@@ -440,6 +484,15 @@ input {
     align-items: flex-start;
   }
 
+  .app-intro {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .intro-flow {
+    flex-wrap: wrap;
+  }
+
   .play-layout {
     grid-template-columns: 1fr;
   }
@@ -452,6 +505,25 @@ input {
 @media (max-width: 560px) {
   .app-header {
     flex-direction: column;
+  }
+
+  .app-intro h1 {
+    font-size: 1.55rem;
+  }
+
+  .intro-flow {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .intro-flow > svg {
+    display: none;
+  }
+
+  .intro-flow span {
+    justify-content: flex-start;
+    width: 100%;
   }
 
   .nickname-button,

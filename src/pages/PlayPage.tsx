@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { RotateCcw } from "lucide-react";
+import { ArrowRight, GitBranch, Link2, MousePointer2, RotateCcw } from "lucide-react";
 
 import { ChessBoardView } from "../components/Board/ChessBoardView";
 import { PromotionDialog } from "../components/Board/PromotionDialog";
@@ -158,6 +158,33 @@ export function PlayPage() {
         </Link>
         <NicknameEditor nickname={nickname} onNickname={setNickname} />
       </header>
+
+      <section className="app-intro" aria-labelledby="app-intro-title">
+        <div>
+          <p className="eyebrow">URL-branching chess</p>
+          <h1 id="app-intro-title">Every move grows the game tree.</h1>
+          <p>
+            Each published move is a playable branch URL. Open any branch, make the next move,
+            and the tree of played games grows one move at a time.
+          </p>
+        </div>
+        <div className="intro-flow" aria-label="Played-game tree flow">
+          <span>
+            <MousePointer2 aria-hidden="true" size={18} />
+            Move
+          </span>
+          <ArrowRight aria-hidden="true" size={17} />
+          <span>
+            <Link2 aria-hidden="true" size={18} />
+            Branch URL
+          </span>
+          <ArrowRight aria-hidden="true" size={17} />
+          <span>
+            <GitBranch aria-hidden="true" size={18} />
+            Game tree
+          </span>
+        </div>
+      </section>
 
       <section className="play-layout">
         <div className="board-column">
