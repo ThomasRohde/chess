@@ -57,10 +57,11 @@ describe("GamesPage", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Games in play" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /e4/i })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Qh4#/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("treeitem", { name: /e4/i })).toBeInTheDocument();
+    expect(screen.queryByRole("treeitem", { name: /Qh4#/i })).not.toBeInTheDocument();
     expect(screen.getByText("1 in play")).toBeInTheDocument();
     expect(screen.getByText("2 finished")).toBeInTheDocument();
+    expect(screen.queryByText(/active/i)).not.toBeInTheDocument();
   });
 
   it("filters finished games by status", async () => {
@@ -71,13 +72,87 @@ describe("GamesPage", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole("button", { name: /Qh4#/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Kxg7/i })).toBeInTheDocument();
+    expect(screen.getByRole("treeitem", { name: /Qh4#/i })).toBeInTheDocument();
+    expect(screen.getByRole("treeitem", { name: /Kxg7/i })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Draw" }));
 
-    expect(screen.queryByRole("button", { name: /Qh4#/i })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Kxg7/i })).toBeInTheDocument();
+    expect(screen.queryByRole("treeitem", { name: /Qh4#/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("treeitem", { name: /Kxg7/i })).toBeInTheDocument();
+  });
+
+  it("selects a branch from the tree and updates the preview", async () => {
+    const user = userEvent.setup();
+    mockedUseBranchRecords.mockReturnValue({
+      branches: [
+        branch({ payload: "open-root", fen: "root-fen", lastMoveSan: "e4", isFinal: false }),
+        branch({
+          payload: "open-child",
+          parentPayload: "open-root",
+          fen: "child-fen",
+          lastMoveSan: "Nf3",
+          isFinal: false,
+        }),
+      ],
+      configured: true,
+      counts: { finished: 0, open: 2 },
+      error: null,
+      hasMore: false,
+      loadMore: loadMore as unknown as () => Promise<void>,
+      loading: false,
+      loadingMore: false,
+    });
+
+    render(
+      <MemoryRouter>
+        <GamesPage mode="open" />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId("board-preview")).toHaveTextContent("root-fen");
+
+    await user.click(screen.getByRole("treeitem", { name: /Nf3/i }));
+
+    expect(screen.getByTestId("board-preview")).toHaveTextContent("child-fen");
+    expect(screen.getAllByText("Nf3").length).toBeGreaterThan(0);
+  });
+
+  it("collapses and expands the loaded branch tree", async () => {
+    const user = userEvent.setup();
+    mockedUseBranchRecords.mockReturnValue({
+      branches: [
+        branch({ payload: "open-root", lastMoveSan: "e4", isFinal: false }),
+        branch({
+          payload: "open-child",
+          parentPayload: "open-root",
+          lastMoveSan: "Nf3",
+          isFinal: false,
+        }),
+      ],
+      configured: true,
+      counts: { finished: 0, open: 2 },
+      error: null,
+      hasMore: false,
+      loadMore: loadMore as unknown as () => Promise<void>,
+      loading: false,
+      loadingMore: false,
+    });
+
+    render(
+      <MemoryRouter>
+        <GamesPage mode="open" />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("treeitem", { name: /Nf3/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Collapse all" }));
+
+    expect(screen.queryByRole("treeitem", { name: /Nf3/i })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Expand all" }));
+
+    expect(screen.getByRole("treeitem", { name: /Nf3/i })).toBeInTheDocument();
   });
 
   it("loads another page when more browser rows are available", async () => {
@@ -99,7 +174,7 @@ describe("GamesPage", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("Showing 1 of 250 games")).toBeInTheDocument();
+    expect(screen.getByText("1 of 250 branches loaded")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Load more games" }));
 
