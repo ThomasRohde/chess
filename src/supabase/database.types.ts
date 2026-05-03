@@ -56,7 +56,16 @@ export type Database = {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      prune_old_finished_branch_paths: {
+        Args: {
+          max_branch_rows?: number;
+          target_branch_rows?: number;
+          max_finished_games?: number;
+        };
+        Returns: number;
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };

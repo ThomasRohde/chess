@@ -62,6 +62,8 @@ describe("GamesPage", () => {
     expect(screen.getByText("1 in play")).toBeInTheDocument();
     expect(screen.getByText("2 finished")).toBeInTheDocument();
     expect(screen.queryByText(/active/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Expand all" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Collapse all" })).toBeInTheDocument();
   });
 
   it("filters finished games by status", async () => {
@@ -74,6 +76,8 @@ describe("GamesPage", () => {
 
     expect(screen.getByRole("treeitem", { name: /Qh4#/i })).toBeInTheDocument();
     expect(screen.getByRole("treeitem", { name: /Kxg7/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Expand all" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Collapse all" })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Draw" }));
 

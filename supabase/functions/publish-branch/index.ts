@@ -41,6 +41,10 @@ const NO_EN_PASSANT_FILE = 8;
 const FILES = "abcdefgh";
 const PIECE_CODES = ["p", "n", "b", "r", "q"] as const;
 const STARTING_FEN = new Chess().fen();
+const BRANCH_RETENTION_MAX_ROWS = 20_000;
+const BRANCH_RETENTION_TARGET_ROWS = 19_000;
+const BRANCH_RETENTION_MAX_FINISHED_GAMES = 50;
+const RETRYABLE_CAPACITY_ERROR_CODES = new Set(["25006", "53100", "53200", "54000"]);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -84,11 +88,19 @@ Deno.serve(async (request) => {
     auth: { persistSession: false },
   });
 
-  const { data, error } = await supabase
-    .from("branches")
-    .insert(validation.row)
-    .select()
-    .single();
+  await pruneOldFinishedBranchPaths(supabase, "before publish");
+
+  let insertResult = await insertBranch(supabase, validation.row);
+
+  if (insertResult.error && isCapacityError(insertResult.error)) {
+    const deletedCount = await pruneOldFinishedBranchPaths(supabase, "after capacity error");
+
+    if (deletedCount > 0) {
+      insertResult = await insertBranch(supabase, validation.row);
+    }
+  }
+
+  const { data, error } = insertResult;
 
   if (!error) {
     return json({ branch: data, created: true }, 201);
@@ -109,6 +121,56 @@ Deno.serve(async (request) => {
   console.error("Failed to publish branch", error);
   return json({ error: "Branch could not be recorded." }, 500);
 });
+
+function insertBranch(supabase: ReturnType<typeof createClient>, row: BranchRowInsert) {
+  return supabase.from("branches").insert(row).select().single();
+}
+
+async function pruneOldFinishedBranchPaths(
+  supabase: ReturnType<typeof createClient>,
+  phase: string,
+): Promise<number> {
+  const { data, error } = await supabase.rpc("prune_old_finished_branch_paths", {
+    max_branch_rows: BRANCH_RETENTION_MAX_ROWS,
+    max_finished_games: BRANCH_RETENTION_MAX_FINISHED_GAMES,
+    target_branch_rows: BRANCH_RETENTION_TARGET_ROWS,
+  });
+
+  if (error) {
+    console.error("Finished branch pruning failed", { error, phase });
+    return 0;
+  }
+
+  const deletedCount = Number(data ?? 0);
+
+  if (Number.isFinite(deletedCount) && deletedCount > 0) {
+    console.log("Pruned old finished branch paths", { deletedCount, phase });
+    return deletedCount;
+  }
+
+  return 0;
+}
+
+function isCapacityError(error: {
+  code?: string;
+  details?: string;
+  hint?: string;
+  message?: string;
+}): boolean {
+  if (error.code && RETRYABLE_CAPACITY_ERROR_CODES.has(error.code)) {
+    return true;
+  }
+
+  const text = `${error.message ?? ""} ${error.details ?? ""} ${error.hint ?? ""}`.toLowerCase();
+  return (
+    text.includes("read-only") ||
+    text.includes("database size") ||
+    text.includes("disk") ||
+    text.includes("quota") ||
+    text.includes("capacity") ||
+    text.includes("no space")
+  );
+}
 
 function isAuthorized(request: Request): boolean {
   const allowedKeys = [

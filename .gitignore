@@ -6,3 +6,4 @@ test-results
 .cache
 .vite
 *.local
+supabase/.temp
