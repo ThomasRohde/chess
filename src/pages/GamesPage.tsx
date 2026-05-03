@@ -321,14 +321,16 @@ function BranchTreeBrowser({
         </p>
       </div>
 
-      <div className="branch-tree-toolbar" aria-label="Tree controls">
-        <button className="tree-control-button" onClick={() => void tree.expandAll()} type="button">
-          Expand all
-        </button>
-        <button className="tree-control-button" onClick={() => tree.collapseAll()} type="button">
-          Collapse all
-        </button>
-      </div>
+      {mode === "open" ? (
+        <div className="branch-tree-toolbar" aria-label="Tree controls">
+          <button className="tree-control-button" onClick={() => void tree.expandAll()} type="button">
+            Expand all
+          </button>
+          <button className="tree-control-button" onClick={() => tree.collapseAll()} type="button">
+            Collapse all
+          </button>
+        </div>
+      ) : null}
 
       {loading ? <p className="muted branch-message">Loading games...</p> : null}
       {error ? (

@@ -92,11 +92,22 @@ VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 
 The browser can only read `public.branches`. Publishing goes through the `publish-branch` Edge Function, which validates the branch payload and records the row server-side. The service role key is only used inside the Edge Function.
 
+On publish, the Edge Function silently prunes old finished branch paths when the branch table exceeds the Free-plan retention cap. The default cap is 20,000 rows, with pruning targeting 19,000 rows.
+
+To replace test data with the famous-game seed set, provide the service role key only in your local shell or ignored `.env.local`, then run:
+
+```bash
+npm run seed:famous-games -- --confirm-clear-test-data
+```
+
+The seed clears `public.branches` and inserts four complete move chains: the Opera Game, Immortal Game, Evergreen Game, and Game of the Century.
+
 Supabase files:
 
 ```text
 supabase/config.toml
 supabase/migrations/20260502090000_create_branches.sql
+supabase/migrations/20260503050738_prune_old_finished_branch_paths.sql
 supabase/functions/publish-branch/index.ts
 ```
 
