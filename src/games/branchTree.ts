@@ -1,9 +1,25 @@
 import type { BranchRecord } from "./branchTypes";
 
-export type BranchTreeNode = {
-  branch: BranchRecord;
-  children: BranchTreeNode[];
-  depth: number;
+export const BRANCH_TREE_ROOT_ID = "__branch-tree-root__";
+
+export type BranchTreeItem = {
+  ancestorLines: boolean[];
+  childrenIds: string[];
+  directChildCount: number;
+  id: string;
+  isLastSibling: boolean;
+  record: BranchRecord | null;
+};
+
+export type BranchTreeData = {
+  expandedFolderIds: string[];
+  items: Record<string, BranchTreeItem>;
+  rootItemId: typeof BRANCH_TREE_ROOT_ID;
+};
+
+export type BuildBranchTreeDataOptions = {
+  flat?: boolean;
+  sortDirection?: "asc" | "desc";
 };
 
 export function filterOpenBranches(branches: BranchRecord[]): BranchRecord[] {
@@ -14,49 +30,58 @@ export function filterFinishedBranches(branches: BranchRecord[]): BranchRecord[]
   return branches.filter((branch) => branch.isFinal);
 }
 
-export function buildBranchTree(branches: BranchRecord[]): BranchTreeNode[] {
-  const sorted = [...branches].sort(compareBranchAge);
-  const nodes = new Map<string, BranchTreeNode>();
+export function buildBranchTreeData(
+  branches: BranchRecord[],
+  options: BuildBranchTreeDataOptions = {},
+): BranchTreeData {
+  const sorted = [...branches].sort((left, right) =>
+    options.sortDirection === "desc" ? compareBranchAge(right, left) : compareBranchAge(left, right),
+  );
+  const items: Record<string, BranchTreeItem> = {
+    [BRANCH_TREE_ROOT_ID]: {
+      ancestorLines: [],
+      childrenIds: [],
+      directChildCount: 0,
+      id: BRANCH_TREE_ROOT_ID,
+      isLastSibling: true,
+      record: null,
+    },
+  };
 
   for (const branch of sorted) {
-    nodes.set(branch.payload, { branch, children: [], depth: 0 });
+    items[branch.payload] = {
+      ancestorLines: [],
+      childrenIds: [],
+      directChildCount: 0,
+      id: branch.payload,
+      isLastSibling: true,
+      record: branch,
+    };
   }
 
-  const roots: BranchTreeNode[] = [];
+  for (const branch of sorted) {
+    const item = items[branch.payload];
+    const parent =
+      !options.flat && branch.parentPayload && items[branch.parentPayload]
+        ? items[branch.parentPayload]
+        : items[BRANCH_TREE_ROOT_ID];
 
-  for (const node of nodes.values()) {
-    const parent = node.branch.parentPayload ? nodes.get(node.branch.parentPayload) : null;
-
-    if (!parent) {
-      roots.push(node);
-      continue;
-    }
-
-    parent.children.push(node);
+    parent.childrenIds.push(item.id);
   }
 
-  for (const root of roots) {
-    applyDepth(root, 0);
+  for (const item of Object.values(items)) {
+    item.directChildCount = item.childrenIds.length;
   }
 
-  return roots;
-}
+  applyTreeLineMetadata(items, BRANCH_TREE_ROOT_ID, []);
 
-export function flattenBranchTree(nodes: BranchTreeNode[]): BranchTreeNode[] {
-  const flat: BranchTreeNode[] = [];
-
-  function visit(node: BranchTreeNode) {
-    flat.push(node);
-    for (const child of node.children) {
-      visit(child);
-    }
-  }
-
-  for (const node of nodes) {
-    visit(node);
-  }
-
-  return flat;
+  return {
+    expandedFolderIds: Object.values(items)
+      .filter((item) => item.childrenIds.length > 0)
+      .map((item) => item.id),
+    items,
+    rootItemId: BRANCH_TREE_ROOT_ID,
+  };
 }
 
 export function countChildren(branches: BranchRecord[]): Map<string, number> {
@@ -73,13 +98,22 @@ export function countChildren(branches: BranchRecord[]): Map<string, number> {
   return counts;
 }
 
-function applyDepth(node: BranchTreeNode, depth: number): void {
-  node.depth = depth;
-  node.children.sort((left, right) => compareBranchAge(left.branch, right.branch));
+function applyTreeLineMetadata(
+  items: Record<string, BranchTreeItem>,
+  parentId: string,
+  ancestorLines: boolean[],
+): void {
+  const parent = items[parentId];
+  const children = parent.childrenIds;
 
-  for (const child of node.children) {
-    applyDepth(child, depth + 1);
-  }
+  children.forEach((childId, index) => {
+    const child = items[childId];
+    const isLastSibling = index === children.length - 1;
+
+    child.ancestorLines = ancestorLines;
+    child.isLastSibling = isLastSibling;
+    applyTreeLineMetadata(items, childId, [...ancestorLines, !isLastSibling]);
+  });
 }
 
 function compareBranchAge(left: BranchRecord, right: BranchRecord): number {
